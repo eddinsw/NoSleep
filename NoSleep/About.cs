@@ -17,7 +17,9 @@ namespace NoSleep
         private bool clickedClosed = false;
 
         private readonly string AppName = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name;
-        private readonly string RegistryKeyPath = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run";
+        private const string RegistryKeyPath = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run";
+        private const string noSleepOnIcon = @"Resources/Wake.ico";
+        private const string noSleepOffIcon = @"Resources/Sleep.ico";
 
         private const int MoveMouseDistance = 1;
 
@@ -65,7 +67,7 @@ namespace NoSleep
             itemStop.Click += ItemStop_Click;
             itemStart = new MenuItem("Start");
             itemStart.Click += ItemStart_Click;
-            itemStartWithWindows = new MenuItem("Windows Startup");
+            itemStartWithWindows = new MenuItem("Startup With Windows");
             itemStartWithWindows.Click += ItemStartWithWindows_Click;
             itemStartWithWindows.Checked = DoesStartUpKeyExist;
             itemClose = new MenuItem("Close");
@@ -110,7 +112,7 @@ namespace NoSleep
 
         private void ItemStart_Click(object sender, EventArgs e)
         {
-            TrayIcon.Icon = new Icon("icons/noSleepOn.ico");
+            TrayIcon.Icon = new Icon(noSleepOnIcon);
             TrayIcon.ContextMenu = LoadRunningContextMenu();
             tmrNoSleep.Enabled = true;
             isRunning = true;
@@ -118,7 +120,7 @@ namespace NoSleep
 
         private void ItemStop_Click(object sender, EventArgs e)
         {
-            TrayIcon.Icon = new Icon("icons/noSleepOff.ico");
+            TrayIcon.Icon = new Icon(noSleepOffIcon);
             TrayIcon.ContextMenu = LoadStoppedContextMenu();
             tmrNoSleep.Enabled = false;
             isRunning = false;
