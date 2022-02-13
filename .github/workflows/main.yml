@@ -32,11 +32,11 @@ jobs:
     - name: Restore NuGet Packages
       run: nuget restore NoSleep.sln
  
-    - name: Build and Publish Web App
+    - name: Build and Publish App
       run: msbuild NoSleep.sln /p:Configuration=Release /t:Publish
  
     - name: Upload Artifact
       uses: actions/upload-artifact@v1.0.0
       with:
         name: published_app
-        path: nosleep\Publish
+        path: NoSleep\bin\Release\app.publish
