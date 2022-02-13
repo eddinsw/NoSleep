@@ -152,8 +152,8 @@ namespace NoSleep
             itemStartWithWindows.Checked = DoesStartUpKeyExist;
         }
 
-        private bool DoesStartUpKeyExist =>  GetStartUpRun().GetValue(AppName, null) != null;
-        
+        private bool DoesStartUpKeyExist => GetStartUpRun().GetValue(AppName, null) != null;
+
         private RegistryKey GetStartUpRun(bool writeable = false)
         {
             return Registry.CurrentUser.OpenSubKey(RegistryKeyPath, writeable);
