@@ -1,6 +1,4 @@
-﻿using Microsoft.Win32;
-using System;
-using System.Drawing;
+﻿using System;
 using System.Windows.Forms;
 
 namespace NoSleep
@@ -13,15 +11,10 @@ namespace NoSleep
         private MenuItem itemStart;
         private MenuItem itemStartWithWindows;
 
-        private bool isRunning = false;
+        private MenuItem NewMenuItemSeparator => new MenuItem("-");
+
         private bool clickedClosed = false;
-
-        private readonly string AppName = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name;
-        private const string RegistryKeyPath = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run";
-        private const string noSleepOnIcon = @"Resources/Wake.ico";
-        private const string noSleepOffIcon = @"Resources/Sleep.ico";
-
-        private const int MoveMouseDistance = 1;
+        private const int TMRINTERVALTIME = 60000;
 
         public About()
         {
@@ -29,7 +22,7 @@ namespace NoSleep
 
             InitializeMenuItems();
 
-            tmrNoSleep.Tick += TmrNoSleep_Tick;
+            InitializeNoSleepTimer();
 
             TrayIcon.DoubleClick += TrayIcon_DoubleClick;
             TrayIcon.Visible = true;
@@ -39,8 +32,15 @@ namespace NoSleep
             WindowState = FormWindowState.Minimized;
             ShowInTaskbar = false;
 
-            if (DoesStartUpKeyExist) ItemStart_Click(this, null);
+            if (RegistryHelper.DoesStartUpKeyExist) ItemStart_Click(this, null);
             else ItemStop_Click(this, null);
+        }
+
+        private void InitializeNoSleepTimer()
+        {
+            tmrNoSleep.Tick += TmrNoSleep_Tick;
+            tmrNoSleep.Interval = TMRINTERVALTIME;
+            tmrNoSleep.Stop();
         }
 
         private void About_FormClosing(object sender, FormClosingEventArgs e)
@@ -55,7 +55,7 @@ namespace NoSleep
 
         private void TrayIcon_DoubleClick(object sender, EventArgs e)
         {
-            if (isRunning) ItemStop_Click(this, null);
+            if (tmrNoSleep.Enabled) ItemStop_Click(this, null);
             else ItemStart_Click(this, null);
         }
 
@@ -69,12 +69,10 @@ namespace NoSleep
             itemStart.Click += ItemStart_Click;
             itemStartWithWindows = new MenuItem("Startup With Windows");
             itemStartWithWindows.Click += ItemStartWithWindows_Click;
-            itemStartWithWindows.Checked = DoesStartUpKeyExist;
+            itemStartWithWindows.Checked = RegistryHelper.DoesStartUpKeyExist;
             itemClose = new MenuItem("Close");
             itemClose.Click += ItemClose_Click;
         }
-
-        private MenuItem MenuItemSeparator() { return new MenuItem("-"); }
 
         private ContextMenu LoadRunningContextMenu()
         {
@@ -82,9 +80,9 @@ namespace NoSleep
 
             menu.MenuItems.Add(itemAbout);
             menu.MenuItems.Add(itemStartWithWindows);
-            menu.MenuItems.Add(MenuItemSeparator());
+            menu.MenuItems.Add(NewMenuItemSeparator);
             menu.MenuItems.Add(itemStop);
-            menu.MenuItems.Add(MenuItemSeparator());
+            menu.MenuItems.Add(NewMenuItemSeparator);
             menu.MenuItems.Add(itemClose);
 
             return menu;
@@ -96,9 +94,9 @@ namespace NoSleep
 
             menu.MenuItems.Add(itemAbout);
             menu.MenuItems.Add(itemStartWithWindows);
-            menu.MenuItems.Add(MenuItemSeparator());
+            menu.MenuItems.Add(NewMenuItemSeparator);
             menu.MenuItems.Add(itemStart);
-            menu.MenuItems.Add(MenuItemSeparator());
+            menu.MenuItems.Add(NewMenuItemSeparator);
             menu.MenuItems.Add(itemClose);
 
             return menu;
@@ -112,18 +110,18 @@ namespace NoSleep
 
         private void ItemStart_Click(object sender, EventArgs e)
         {
-            TrayIcon.Icon = new Icon(noSleepOnIcon);
+            TrayIcon.Icon = NoSleep.Properties.Resources.wake;
             TrayIcon.ContextMenu = LoadRunningContextMenu();
-            tmrNoSleep.Enabled = true;
-            isRunning = true;
+            SleepManagment.PreventSleep();
+            tmrNoSleep.Start();
         }
 
         private void ItemStop_Click(object sender, EventArgs e)
         {
-            TrayIcon.Icon = new Icon(noSleepOffIcon);
+            TrayIcon.Icon = NoSleep.Properties.Resources.sleep;
             TrayIcon.ContextMenu = LoadStoppedContextMenu();
-            tmrNoSleep.Enabled = false;
-            isRunning = false;
+            SleepManagment.AllowSleep();
+            tmrNoSleep.Stop();
         }
 
         private void ItemClose_Click(object sender, EventArgs e)
@@ -134,31 +132,17 @@ namespace NoSleep
 
         private void TmrNoSleep_Tick(object sender, EventArgs e)
         {
-            MoveCursor();
-        }
-
-        private void MoveCursor()
-        {
-            Cursor = new Cursor(Cursor.Current.Handle);
-            Cursor.Position = new Point(Cursor.Position.X - MoveMouseDistance, Cursor.Position.Y);
-            Cursor.Position = new Point(Cursor.Position.X + MoveMouseDistance, Cursor.Position.Y);
+            SleepManagment.PreventSleep();
         }
 
         private void ItemStartWithWindows_Click(object sender, EventArgs e)
         {
-            if (!DoesStartUpKeyExist)
-                GetStartUpRun(true).SetValue(AppName, Application.ExecutablePath);
+            if (!RegistryHelper.DoesStartUpKeyExist)
+                RegistryHelper.AddStartup();
             else
-                GetStartUpRun(true).DeleteValue(AppName, false);
+                RegistryHelper.RemoveStartup();
 
-            itemStartWithWindows.Checked = DoesStartUpKeyExist;
-        }
-
-        private bool DoesStartUpKeyExist => GetStartUpRun().GetValue(AppName, null) != null;
-
-        private RegistryKey GetStartUpRun(bool writeable = false)
-        {
-            return Registry.CurrentUser.OpenSubKey(RegistryKeyPath, writeable);
+            itemStartWithWindows.Checked = RegistryHelper.DoesStartUpKeyExist;
         }
     }
 }
