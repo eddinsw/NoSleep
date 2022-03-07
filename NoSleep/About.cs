@@ -111,6 +111,7 @@ namespace NoSleep
         private void ItemStart_Click(object sender, EventArgs e)
         {
             TrayIcon.Icon = NoSleep.Properties.Resources.wake;
+            TrayIcon.Text = "No Sleep";
             TrayIcon.ContextMenu = LoadRunningContextMenu();
             SleepManagment.PreventSleep();
         }
@@ -118,6 +119,7 @@ namespace NoSleep
         private void ItemStop_Click(object sender, EventArgs e)
         {
             TrayIcon.Icon = NoSleep.Properties.Resources.sleep;
+            TrayIcon.Text = "Sleep";
             TrayIcon.ContextMenu = LoadStoppedContextMenu();
             SleepManagment.AllowSleep();
         }
