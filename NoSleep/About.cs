@@ -16,6 +16,9 @@ namespace NoSleep
         private bool clickedClosed = false;
         private const int TMRINTERVALTIME = 60000;
 
+
+
+
         public About()
         {
             InitializeComponent();
@@ -144,5 +147,17 @@ namespace NoSleep
 
             itemStartWithWindows.Checked = RegistryHelper.DoesStartUpKeyExist;
         }
+
+        private static int WM_QUERYENDSESSION = 0x11;
+        protected override void WndProc(ref System.Windows.Forms.Message m)
+        {
+            if (m.Msg == WM_QUERYENDSESSION)
+            {
+                ItemClose_Click(this, null);
+            }
+
+            base.WndProc(ref m);
+        }
+
     }
 }
