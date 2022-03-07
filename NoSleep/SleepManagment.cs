@@ -7,7 +7,7 @@ namespace NoSleep
     {
         public static void PreventSleep()
         {
-            SetThreadExecutionState(ExecutionState.EsContinuous | ExecutionState.EsSystemRequired);
+            SetThreadExecutionState(ExecutionState.EsContinuous | ExecutionState.EsSystemRequired | ExecutionState.EsDisplayRequired);
         }
 
         public static void AllowSleep()
