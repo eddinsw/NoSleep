@@ -14,18 +14,12 @@ namespace NoSleep
         private MenuItem NewMenuItemSeparator => new MenuItem("-");
 
         private bool clickedClosed = false;
-        private const int TMRINTERVALTIME = 60000;
-
-
-
 
         public About()
         {
             InitializeComponent();
 
             InitializeMenuItems();
-
-            InitializeNoSleepTimer();
 
             TrayIcon.DoubleClick += TrayIcon_DoubleClick;
             TrayIcon.Visible = true;
@@ -39,12 +33,7 @@ namespace NoSleep
             else ItemStop_Click(this, null);
         }
 
-        private void InitializeNoSleepTimer()
-        {
-            tmrNoSleep.Tick += TmrNoSleep_Tick;
-            tmrNoSleep.Interval = TMRINTERVALTIME;
-            tmrNoSleep.Stop();
-        }
+        #region FormEvents
 
         private void About_FormClosing(object sender, FormClosingEventArgs e)
         {
@@ -58,9 +47,13 @@ namespace NoSleep
 
         private void TrayIcon_DoubleClick(object sender, EventArgs e)
         {
-            if (tmrNoSleep.Enabled) ItemStop_Click(this, null);
+            if (SleepManagment.PreventingSleep) ItemStop_Click(this, null);
             else ItemStart_Click(this, null);
         }
+
+        #endregion FormEvents
+
+        #region ContextMenus
 
         private void InitializeMenuItems()
         {
@@ -105,6 +98,10 @@ namespace NoSleep
             return menu;
         }
 
+        #endregion ContextMenus
+
+        #region ContextMenuEvents
+
         private void ItemAbout_Click(object sender, EventArgs e)
         {
             WindowState = FormWindowState.Normal;
@@ -114,28 +111,23 @@ namespace NoSleep
         private void ItemStart_Click(object sender, EventArgs e)
         {
             TrayIcon.Icon = NoSleep.Properties.Resources.wake;
+            TrayIcon.Text = "No Sleep";
             TrayIcon.ContextMenu = LoadRunningContextMenu();
             SleepManagment.PreventSleep();
-            tmrNoSleep.Start();
         }
 
         private void ItemStop_Click(object sender, EventArgs e)
         {
             TrayIcon.Icon = NoSleep.Properties.Resources.sleep;
+            TrayIcon.Text = "Sleep";
             TrayIcon.ContextMenu = LoadStoppedContextMenu();
             SleepManagment.AllowSleep();
-            tmrNoSleep.Stop();
         }
 
         private void ItemClose_Click(object sender, EventArgs e)
         {
             clickedClosed = true;
             Close();
-        }
-
-        private void TmrNoSleep_Tick(object sender, EventArgs e)
-        {
-            SleepManagment.PreventSleep();
         }
 
         private void ItemStartWithWindows_Click(object sender, EventArgs e)
@@ -148,7 +140,12 @@ namespace NoSleep
             itemStartWithWindows.Checked = RegistryHelper.DoesStartUpKeyExist;
         }
 
+        #endregion ContextMenuEvents
+
+        #region ShutdownWithWindows
+
         private static int WM_QUERYENDSESSION = 0x11;
+
         protected override void WndProc(ref System.Windows.Forms.Message m)
         {
             if (m.Msg == WM_QUERYENDSESSION)
@@ -159,5 +156,6 @@ namespace NoSleep
             base.WndProc(ref m);
         }
 
+        #endregion ShutdownWithWindows
     }
 }

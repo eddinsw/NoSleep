@@ -31,7 +31,6 @@
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(About));
             this.TrayIcon = new System.Windows.Forms.NotifyIcon(this.components);
-            this.tmrNoSleep = new System.Windows.Forms.Timer(this.components);
             this.label1 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
@@ -42,10 +41,6 @@
             this.TrayIcon.Icon = ((System.Drawing.Icon)(resources.GetObject("TrayIcon.Icon")));
             this.TrayIcon.Text = "No Sleep";
             this.TrayIcon.Visible = true;
-            // 
-            // tmrNoSleep
-            // 
-            this.tmrNoSleep.Interval = 6000;
             // 
             // label1
             // 
@@ -99,7 +94,6 @@
         #endregion
 
         private System.Windows.Forms.NotifyIcon TrayIcon;
-        private System.Windows.Forms.Timer tmrNoSleep;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Label label3;
