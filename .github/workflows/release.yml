@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - 'v*.*.*'  # Trigger on version tags like v1.0.3
+  pull_request:
+    branches: [ master ]  # Test builds on PRs to master
 
 permissions:
   contents: write  # Required for creating releases
@@ -17,12 +19,16 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 2. Extract version from tag
+      # 2. Extract version from tag (or use default for PR builds)
       - name: Get Version from Tag
         id: get-version
         shell: bash
         run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            VERSION="0.0.0-pr${{ github.event.pull_request.number }}"
+          else
+            VERSION=${GITHUB_REF#refs/tags/v}
+          fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       # 3. Setup .NET
@@ -51,6 +57,7 @@ jobs:
 
       # 7. Download previous releases (for delta generation)
       - name: Download Previous Releases
+        if: github.event_name != 'pull_request'  # Skip for PR builds
         continue-on-error: true  # First release will have no previous releases
         run: |
           vpk download github `
@@ -71,6 +78,7 @@ jobs:
 
       # 9. Upload to GitHub Releases
       - name: Upload to GitHub Releases
+        if: github.event_name != 'pull_request'  # Skip for PR builds
         run: |
           vpk upload github `
             --repoUrl https://github.com/${{ github.repository }} `
