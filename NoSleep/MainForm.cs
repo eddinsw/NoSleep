@@ -14,7 +14,7 @@ namespace NoSleep
         private readonly TrayIconManager trayIconManager;
         private readonly SleepStateController stateController;
         private readonly UpdateService updateService;
-        private readonly HotkeyManager hotkeyManager;
+        private HotkeyManager hotkeyManager;  // Not readonly - lazy initialized when handle is available
         private readonly NotificationService notificationService;
         private System.Windows.Forms.Timer updateCheckTimer;
 
@@ -30,7 +30,7 @@ namespace NoSleep
             trayIconManager = new TrayIconManager(TrayIcon, menuBuilder);
             stateController = new SleepStateController();
             updateService = new UpdateService();
-            hotkeyManager = new HotkeyManager(this.Handle);
+            // hotkeyManager will be initialized in InitializeHotkey() when handle is available
             notificationService = new NotificationService(TrayIcon);
 
             // Wire up events
@@ -72,8 +72,7 @@ namespace NoSleep
             // State controller events
             stateController.StateChanged += OnSleepStateChanged;
 
-            // Hotkey events
-            hotkeyManager.HotkeyPressed += OnHotkeyPressed;
+            // Hotkey events will be wired up in InitializeHotkey()
         }
 
         private void InitializeApplicationState()
@@ -93,6 +92,13 @@ namespace NoSleep
         {
             if (!Properties.Settings.Default.HotkeyEnabled)
                 return;
+
+            // Initialize HotkeyManager now that the window handle is available
+            if (hotkeyManager == null)
+            {
+                hotkeyManager = new HotkeyManager(this.Handle);
+                hotkeyManager.HotkeyPressed += OnHotkeyPressed;
+            }
 
             uint modifiers = Properties.Settings.Default.HotkeyModifiers;
             uint key = Properties.Settings.Default.HotkeyKey;
@@ -146,7 +152,7 @@ namespace NoSleep
         protected override void WndProc(ref Message m)
         {
             // Handle hotkey messages
-            if (hotkeyManager.ProcessMessage(ref m))
+            if (hotkeyManager?.ProcessMessage(ref m) == true)
             {
                 return;
             }
