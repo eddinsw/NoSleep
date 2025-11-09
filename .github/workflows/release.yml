@@ -1,0 +1,80 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Trigger on version tags like v1.0.3
+
+permissions:
+  contents: write  # Required for creating releases
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+      # 1. Checkout code
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # 2. Extract version from tag
+      - name: Get Version from Tag
+        id: get-version
+        shell: bash
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      # 3. Setup .NET
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'  # Need .NET 8 SDK even for Framework 4.8
+
+      # 4. Restore dependencies
+      - name: Restore Dependencies
+        run: dotnet restore NoSleep.sln
+
+      # 5. Publish application
+      - name: Publish Application
+        run: |
+          dotnet publish NoSleep\NoSleep.csproj `
+            -c Release `
+            --self-contained true `
+            -r win-x64 `
+            -o publish `
+            /p:Version=${{ steps.get-version.outputs.version }}
+
+      # 6. Install vpk tool
+      - name: Install Velopack CLI
+        run: dotnet tool install -g vpk
+
+      # 7. Download previous releases (for delta generation)
+      - name: Download Previous Releases
+        continue-on-error: true  # First release will have no previous releases
+        run: |
+          vpk download github `
+            --repoUrl https://github.com/${{ github.repository }} `
+            --token ${{ secrets.GITHUB_TOKEN }}
+
+      # 8. Package with Velopack
+      - name: Create Velopack Release
+        run: |
+          vpk pack `
+            --packId NoSleep `
+            --packVersion ${{ steps.get-version.outputs.version }} `
+            --packDir publish `
+            --mainExe NoSleep.exe `
+            --icon NoSleep\Resources\wake.ico `
+            --packTitle "NoSleep" `
+            --delta BestSize
+
+      # 9. Upload to GitHub Releases
+      - name: Upload to GitHub Releases
+        run: |
+          vpk upload github `
+            --repoUrl https://github.com/${{ github.repository }} `
+            --token ${{ secrets.GITHUB_TOKEN }} `
+            --publish `
+            --releaseName "NoSleep v${{ steps.get-version.outputs.version }}" `
+            --tag v${{ steps.get-version.outputs.version }}
