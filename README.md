@@ -1,6 +1,6 @@
 # NoSleep
 
-A lightweight console-based system tray application that prevents your Windows machine from sleeping or locking.
+A lightweight system tray application that prevents your Windows machine from sleeping or locking.
 
 ## Features
 
