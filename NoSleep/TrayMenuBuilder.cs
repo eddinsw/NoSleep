@@ -15,8 +15,7 @@ namespace NoSleep
         private readonly ToolStripMenuItem itemStartWithWindows;
         private readonly ToolStripMenuItem itemCheckForUpdates;
 
-        private readonly ContextMenuStrip runningContextMenu;
-        private readonly ContextMenuStrip stoppedContextMenu;
+        private readonly ContextMenuStrip contextMenu;
 
         public event EventHandler AboutClicked;
         public event EventHandler StartClicked;
@@ -48,20 +47,33 @@ namespace NoSleep
             itemStartWithWindows.Click += (s, e) => StartWithWindowsClicked?.Invoke(s, e);
             itemStartWithWindows.Checked = RegistryHelper.DoesStartUpKeyExist;
 
-            // Build the context menus
-            runningContextMenu = BuildRunningMenu();
-            stoppedContextMenu = BuildStoppedMenu();
+            // Create the single context menu
+            contextMenu = new ContextMenuStrip();
         }
 
         /// <summary>
         /// Gets the context menu for when sleep prevention is running.
         /// </summary>
-        public ContextMenuStrip RunningContextMenu => runningContextMenu;
+        public ContextMenuStrip RunningContextMenu
+        {
+            get
+            {
+                RebuildMenu(true);
+                return contextMenu;
+            }
+        }
 
         /// <summary>
         /// Gets the context menu for when sleep prevention is stopped.
         /// </summary>
-        public ContextMenuStrip StoppedContextMenu => stoppedContextMenu;
+        public ContextMenuStrip StoppedContextMenu
+        {
+            get
+            {
+                RebuildMenu(false);
+                return contextMenu;
+            }
+        }
 
         /// <summary>
         /// Updates the "Startup With Windows" menu item checked state.
@@ -71,36 +83,22 @@ namespace NoSleep
             itemStartWithWindows.Checked = RegistryHelper.DoesStartUpKeyExist;
         }
 
-        private ContextMenuStrip BuildRunningMenu()
+        private void RebuildMenu(bool isRunning)
         {
-            ContextMenuStrip menu = new ContextMenuStrip();
-            // Primary action first
-            menu.Items.Add(itemStop);
-            menu.Items.Add(new ToolStripSeparator());
-            // Settings and info
-            menu.Items.Add(itemStartWithWindows);
-            menu.Items.Add(itemCheckForUpdates);
-            menu.Items.Add(itemAbout);
-            menu.Items.Add(new ToolStripSeparator());
-            // Exit
-            menu.Items.Add(itemClose);
-            return menu;
-        }
+            contextMenu.Items.Clear();
 
-        private ContextMenuStrip BuildStoppedMenu()
-        {
-            ContextMenuStrip menu = new ContextMenuStrip();
             // Primary action first
-            menu.Items.Add(itemStart);
-            menu.Items.Add(new ToolStripSeparator());
+            contextMenu.Items.Add(isRunning ? itemStop : itemStart);
+            contextMenu.Items.Add(new ToolStripSeparator());
+
             // Settings and info
-            menu.Items.Add(itemStartWithWindows);
-            menu.Items.Add(itemCheckForUpdates);
-            menu.Items.Add(itemAbout);
-            menu.Items.Add(new ToolStripSeparator());
+            contextMenu.Items.Add(itemStartWithWindows);
+            contextMenu.Items.Add(itemCheckForUpdates);
+            contextMenu.Items.Add(itemAbout);
+            contextMenu.Items.Add(new ToolStripSeparator());
+
             // Exit
-            menu.Items.Add(itemClose);
-            return menu;
+            contextMenu.Items.Add(itemClose);
         }
     }
 }
