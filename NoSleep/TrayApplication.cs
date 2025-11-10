@@ -67,6 +67,7 @@ namespace NoSleep
             menuBuilder.StopClicked += OnStopClicked;
             menuBuilder.CloseClicked += OnCloseClicked;
             menuBuilder.StartWithWindowsClicked += OnStartWithWindowsClicked;
+            menuBuilder.RestartAsAdminClicked += OnRestartAsAdminClicked;
             menuBuilder.CheckForUpdatesClicked += OnCheckForUpdatesClicked;
 
             // Tray icon events
@@ -123,12 +124,28 @@ namespace NoSleep
             }
             catch (Exception ex)
             {
-                // Show notification if hotkey registration fails
-                notificationService.ShowNotification(
+                // Show better error message with option to disable
+                var result = MessageBox.Show(
+                    $"Failed to register global hotkey Ctrl+Shift+F9.\n\n" +
+                    $"Reason: {ex.Message}\n\n" +
+                    "This usually means another application is using this hotkey.\n\n" +
+                    "Would you like to disable the global hotkey feature?",
                     "Hotkey Registration Failed",
-                    ex.Message,
-                    NotificationType.Warning
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning
                 );
+
+                if (result == DialogResult.Yes)
+                {
+                    Properties.Settings.Default.HotkeyEnabled = false;
+                    Properties.Settings.Default.Save();
+
+                    notificationService.ShowNotification(
+                        "Hotkey Disabled",
+                        "Global hotkey has been disabled. You can still toggle via tray icon.",
+                        NotificationType.Info
+                    );
+                }
             }
         }
 
@@ -159,11 +176,16 @@ namespace NoSleep
 
         private void OnAboutClicked(object sender, EventArgs e)
         {
-            // Show a simple MessageBox with About information
+            // Show enhanced About information
             string version = updateService.GetCurrentVersion() ?? "Unknown";
+            bool isAdmin = RegistryHelper.IsUserAdministrator();
+            string hotkeyStatus = Properties.Settings.Default.HotkeyEnabled ? "Ctrl+Shift+F9" : "Disabled";
+
             MessageBox.Show(
-                $"NoSleep v{version}\n\n" +
+                $"NoSleep v{version}\n" +
+                $"Running as: {(isAdmin ? "Administrator" : "Standard User")}\n\n" +
                 "Prevents Windows from sleeping or locking.\n\n" +
+                $"Global Hotkey: {hotkeyStatus}\n\n" +
                 "Created By: Will Eddins",
                 "About NoSleep",
                 MessageBoxButtons.OK,
@@ -190,6 +212,17 @@ namespace NoSleep
         {
             RegistryHelper.SetStartup(!RegistryHelper.DoesStartUpKeyExist);
             menuBuilder.UpdateStartupMenuItemState();
+        }
+
+        private void OnRestartAsAdminClicked(object sender, EventArgs e)
+        {
+            // Restart with administrator privileges
+            if (RegistryHelper.RestartAsAdministrator())
+            {
+                // Successfully restarted, close this instance
+                ExitApplication();
+            }
+            // If false, user cancelled UAC or error occurred (already handled in RegistryHelper)
         }
 
         private async void OnCheckForUpdatesClicked(object sender, EventArgs e)

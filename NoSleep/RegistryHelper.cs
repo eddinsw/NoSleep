@@ -1,5 +1,6 @@
 ﻿using Microsoft.Win32;
 using System;
+using System.Diagnostics;
 using System.Reflection;
 using System.Security.Principal;
 using System.Windows.Forms;
@@ -70,6 +71,40 @@ namespace NoSleep
             catch (Exception ex)
             {
                 MessageBox.Show($"Failed to check user privileges: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Restarts the application with administrator privileges.
+        /// </summary>
+        /// <returns>True if restart initiated successfully, false if user cancelled or error occurred.</returns>
+        public static bool RestartAsAdministrator()
+        {
+            try
+            {
+                var processInfo = new ProcessStartInfo
+                {
+                    FileName = Application.ExecutablePath,
+                    UseShellExecute = true,
+                    Verb = "runas" // Request elevation
+                };
+                Process.Start(processInfo);
+                return true;
+            }
+            catch (System.ComponentModel.Win32Exception)
+            {
+                // User cancelled UAC prompt
+                return false;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Failed to restart as administrator: {ex.Message}",
+                    "Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
                 return false;
             }
         }
