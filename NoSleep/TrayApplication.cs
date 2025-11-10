@@ -6,10 +6,11 @@ using Velopack;
 namespace NoSleep
 {
     /// <summary>
-    /// Main application form that displays the About dialog and coordinates the system tray application.
+    /// Main application class that coordinates the system tray application without using a Form.
     /// </summary>
-    public partial class MainForm : Form
+    public class TrayApplication : ApplicationContext
     {
+        private readonly NotifyIcon trayIcon;
         private readonly TrayMenuBuilder menuBuilder;
         private readonly TrayIconManager trayIconManager;
         private readonly SleepStateController stateController;
@@ -17,35 +18,37 @@ namespace NoSleep
         private HotkeyManager hotkeyManager;  // Not readonly - lazy initialized when handle is available
         private readonly NotificationService notificationService;
         private System.Windows.Forms.Timer updateCheckTimer;
+        private HiddenWindow hiddenWindow;
 
-        private bool clickedClosed = false;
         private UpdateInfo pendingUpdate;
 
-        public MainForm()
+        public TrayApplication()
         {
-            InitializeComponent();
+            // Create NotifyIcon first
+            trayIcon = new NotifyIcon();
 
             // Initialize components
             menuBuilder = new TrayMenuBuilder();
-            trayIconManager = new TrayIconManager(TrayIcon, menuBuilder);
+            trayIconManager = new TrayIconManager(trayIcon, menuBuilder);
             stateController = new SleepStateController();
             updateService = new UpdateService();
-            // hotkeyManager will be initialized in InitializeHotkey() when handle is available
-            notificationService = new NotificationService(TrayIcon);
+            notificationService = new NotificationService(trayIcon);
+
+            // Create hidden window for hotkey support
+            hiddenWindow = new HiddenWindow();
+            hiddenWindow.MessageReceived += OnWindowMessageReceived;
 
             // Wire up events
             WireUpEvents();
 
-            // Set initial form state
-            WindowState = FormWindowState.Minimized;
-            ShowInTaskbar = false;
-            FormClosing += MainForm_FormClosing;
+            // Set default icon state (stopped)
+            trayIconManager.SetStoppedState();
 
-            // Show tray icon
-            trayIconManager.Show();
-
-            // Initialize state based on startup settings
+            // Initialize state based on startup settings (this may change the icon)
             InitializeApplicationState();
+
+            // Show tray icon (after state is initialized)
+            trayIconManager.Show();
 
             // Start periodic update checks
             InitializeUpdateChecking();
@@ -96,7 +99,7 @@ namespace NoSleep
             // Initialize HotkeyManager now that the window handle is available
             if (hotkeyManager == null)
             {
-                hotkeyManager = new HotkeyManager(this.Handle);
+                hotkeyManager = new HotkeyManager(hiddenWindow.Handle);
                 hotkeyManager.HotkeyPressed += OnHotkeyPressed;
             }
 
@@ -131,25 +134,9 @@ namespace NoSleep
 
         #endregion
 
-        #region Form Events
+        #region Window Message Handling
 
-        private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
-        {
-            if (!clickedClosed)
-            {
-                // Minimize instead of closing
-                e.Cancel = true;
-                WindowState = FormWindowState.Minimized;
-                ShowInTaskbar = false;
-            }
-            else
-            {
-                // Cleanup hotkey on actual close
-                hotkeyManager?.Dispose();
-            }
-        }
-
-        protected override void WndProc(ref Message m)
+        private void OnWindowMessageReceived(ref Message m)
         {
             // Handle hotkey messages
             if (hotkeyManager?.ProcessMessage(ref m) == true)
@@ -162,11 +149,8 @@ namespace NoSleep
             if (m.Msg == WM_QUERYENDSESSION)
             {
                 // Windows is shutting down, close the application properly
-                clickedClosed = true;
-                Close();
+                ExitApplication();
             }
-
-            base.WndProc(ref m);
         }
 
         #endregion
@@ -175,9 +159,16 @@ namespace NoSleep
 
         private void OnAboutClicked(object sender, EventArgs e)
         {
-            // Show the About form
-            WindowState = FormWindowState.Normal;
-            ShowInTaskbar = true;
+            // Show a simple MessageBox with About information
+            string version = updateService.GetCurrentVersion() ?? "Unknown";
+            MessageBox.Show(
+                $"NoSleep v{version}\n\n" +
+                "Prevents Windows from sleeping or locking.\n\n" +
+                "Created By: Will Eddins",
+                "About NoSleep",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information
+            );
         }
 
         private void OnStartClicked(object sender, EventArgs e)
@@ -192,8 +183,7 @@ namespace NoSleep
 
         private void OnCloseClicked(object sender, EventArgs e)
         {
-            clickedClosed = true;
-            Close();
+            ExitApplication();
         }
 
         private void OnStartWithWindowsClicked(object sender, EventArgs e)
@@ -288,10 +278,10 @@ namespace NoSleep
         private void NotifyUpdateAvailable(UpdateInfo updateInfo)
         {
             // Unsubscribe any previous handlers to avoid duplicates
-            TrayIcon.BalloonTipClicked -= OnBalloonTipClicked;
-            TrayIcon.BalloonTipClicked += OnBalloonTipClicked;
+            trayIcon.BalloonTipClicked -= OnBalloonTipClicked;
+            trayIcon.BalloonTipClicked += OnBalloonTipClicked;
 
-            TrayIcon.ShowBalloonTip(
+            trayIcon.ShowBalloonTip(
                 5000,
                 "Update Available",
                 $"NoSleep {updateInfo.TargetFullRelease.Version} is available. Click to install.",
@@ -312,36 +302,73 @@ namespace NoSleep
             try
             {
                 // Save original tray text
-                string originalText = TrayIcon.Text;
+                string originalText = trayIcon.Text;
 
                 // Show progress in tray icon text
-                TrayIcon.Text = "Downloading update...";
+                trayIcon.Text = "Downloading update...";
 
                 await updateService.DownloadUpdateAsync(updateInfo, progress =>
                 {
-                    if (this.InvokeRequired)
-                    {
-                        this.Invoke(new Action(() => TrayIcon.Text = $"Downloading... {progress}%"));
-                    }
-                    else
-                    {
-                        TrayIcon.Text = $"Downloading... {progress}%";
-                    }
+                    trayIcon.Text = $"Downloading... {progress}%";
                 });
 
-                TrayIcon.Text = "Installing update...";
+                trayIcon.Text = "Installing update...";
 
                 // Apply update and restart
                 updateService.ApplyUpdateAndRestart(updateInfo);
             }
             catch (Exception ex)
             {
-                TrayIcon.ShowBalloonTip(
+                trayIcon.ShowBalloonTip(
                     5000,
                     "Update Failed",
                     $"Failed to install update: {ex.Message}",
                     ToolTipIcon.Error
                 );
+            }
+        }
+
+        #endregion
+
+        #region Application Lifetime
+
+        private void ExitApplication()
+        {
+            // Cleanup resources
+            hotkeyManager?.Dispose();
+            updateCheckTimer?.Stop();
+            updateCheckTimer?.Dispose();
+            trayIconManager?.Hide();
+            trayIcon?.Dispose();
+            hiddenWindow?.DestroyHandle();
+
+            // Exit the application
+            ExitThread();
+        }
+
+        #endregion
+
+        #region Hidden Window for Message Processing
+
+        /// <summary>
+        /// Hidden window class for processing Windows messages (needed for hotkey support).
+        /// </summary>
+        private class HiddenWindow : NativeWindow
+        {
+            public delegate void MessageReceivedHandler(ref Message m);
+            public event MessageReceivedHandler MessageReceived;
+
+            public HiddenWindow()
+            {
+                CreateHandle(new CreateParams());
+            }
+
+            protected override void WndProc(ref Message m)
+            {
+                // Raise event for message processing
+                MessageReceived?.Invoke(ref m);
+
+                base.WndProc(ref m);
             }
         }
 

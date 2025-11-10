@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading;
 using System.Windows.Forms;
-using Microsoft.Toolkit.Uwp.Notifications;
 using Velopack;
 
 namespace NoSleep
@@ -40,9 +39,8 @@ namespace NoSleep
                     return;
                 }
 
-                Application.EnableVisualStyles();
-                Application.SetCompatibleTextRenderingDefault(false);
-                Application.Run(new MainForm());
+                // Run the tray application
+                Application.Run(new TrayApplication());
 
                 // Keep mutex alive until application exits
                 GC.KeepAlive(mutex);
