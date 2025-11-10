@@ -43,13 +43,10 @@ namespace NoSleep
             itemClose = new ToolStripMenuItem("Close");
             itemClose.Click += (s, e) => CloseClicked?.Invoke(s, e);
 
-            // Only show startup option for administrators
-            if (RegistryHelper.IsUserAdministrator())
-            {
-                itemStartWithWindows = new ToolStripMenuItem("Startup With Windows");
-                itemStartWithWindows.Click += (s, e) => StartWithWindowsClicked?.Invoke(s, e);
-                itemStartWithWindows.Checked = RegistryHelper.DoesStartUpKeyExist;
-            }
+            // Always show "Startup With Windows" for all users
+            itemStartWithWindows = new ToolStripMenuItem("Startup With Windows");
+            itemStartWithWindows.Click += (s, e) => StartWithWindowsClicked?.Invoke(s, e);
+            itemStartWithWindows.Checked = RegistryHelper.DoesStartUpKeyExist;
 
             // Build the context menus
             runningContextMenu = BuildRunningMenu();
@@ -71,24 +68,21 @@ namespace NoSleep
         /// </summary>
         public void UpdateStartupMenuItemState()
         {
-            if (itemStartWithWindows != null)
-            {
-                itemStartWithWindows.Checked = RegistryHelper.DoesStartUpKeyExist;
-            }
+            itemStartWithWindows.Checked = RegistryHelper.DoesStartUpKeyExist;
         }
 
         private ContextMenuStrip BuildRunningMenu()
         {
             ContextMenuStrip menu = new ContextMenuStrip();
-            menu.Items.Add(itemAbout);
-            menu.Items.Add(itemCheckForUpdates);
-            if (itemStartWithWindows != null)
-            {
-                menu.Items.Add(itemStartWithWindows);
-            }
-            menu.Items.Add(new ToolStripSeparator());
+            // Primary action first
             menu.Items.Add(itemStop);
             menu.Items.Add(new ToolStripSeparator());
+            // Settings and info
+            menu.Items.Add(itemStartWithWindows);
+            menu.Items.Add(itemCheckForUpdates);
+            menu.Items.Add(itemAbout);
+            menu.Items.Add(new ToolStripSeparator());
+            // Exit
             menu.Items.Add(itemClose);
             return menu;
         }
@@ -96,15 +90,15 @@ namespace NoSleep
         private ContextMenuStrip BuildStoppedMenu()
         {
             ContextMenuStrip menu = new ContextMenuStrip();
-            menu.Items.Add(itemAbout);
-            menu.Items.Add(itemCheckForUpdates);
-            if (itemStartWithWindows != null)
-            {
-                menu.Items.Add(itemStartWithWindows);
-            }
-            menu.Items.Add(new ToolStripSeparator());
+            // Primary action first
             menu.Items.Add(itemStart);
             menu.Items.Add(new ToolStripSeparator());
+            // Settings and info
+            menu.Items.Add(itemStartWithWindows);
+            menu.Items.Add(itemCheckForUpdates);
+            menu.Items.Add(itemAbout);
+            menu.Items.Add(new ToolStripSeparator());
+            // Exit
             menu.Items.Add(itemClose);
             return menu;
         }

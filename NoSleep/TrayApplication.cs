@@ -123,12 +123,28 @@ namespace NoSleep
             }
             catch (Exception ex)
             {
-                // Show notification if hotkey registration fails
-                notificationService.ShowNotification(
+                // Show better error message with option to disable
+                var result = MessageBox.Show(
+                    $"Failed to register global hotkey Ctrl+Shift+F9.\n\n" +
+                    $"Reason: {ex.Message}\n\n" +
+                    "This usually means another application is using this hotkey.\n\n" +
+                    "Would you like to disable the global hotkey feature?",
                     "Hotkey Registration Failed",
-                    ex.Message,
-                    NotificationType.Warning
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning
                 );
+
+                if (result == DialogResult.Yes)
+                {
+                    Properties.Settings.Default.HotkeyEnabled = false;
+                    Properties.Settings.Default.Save();
+
+                    notificationService.ShowNotification(
+                        "Hotkey Disabled",
+                        "Global hotkey has been disabled. You can still toggle via tray icon.",
+                        NotificationType.Info
+                    );
+                }
             }
         }
 
@@ -159,11 +175,16 @@ namespace NoSleep
 
         private void OnAboutClicked(object sender, EventArgs e)
         {
-            // Show a simple MessageBox with About information
+            // Show enhanced About information
             string version = updateService.GetCurrentVersion() ?? "Unknown";
+            bool isAdmin = RegistryHelper.IsUserAdministrator();
+            string hotkeyStatus = Properties.Settings.Default.HotkeyEnabled ? "Ctrl+Shift+F9" : "Disabled";
+
             MessageBox.Show(
-                $"NoSleep v{version}\n\n" +
+                $"NoSleep v{version}\n" +
+                $"Running as: {(isAdmin ? "Administrator" : "Standard User")}\n\n" +
                 "Prevents Windows from sleeping or locking.\n\n" +
+                $"Global Hotkey: {hotkeyStatus}\n\n" +
                 "Created By: Will Eddins",
                 "About NoSleep",
                 MessageBoxButtons.OK,
@@ -188,8 +209,40 @@ namespace NoSleep
 
         private void OnStartWithWindowsClicked(object sender, EventArgs e)
         {
-            RegistryHelper.SetStartup(!RegistryHelper.DoesStartUpKeyExist);
-            menuBuilder.UpdateStartupMenuItemState();
+            bool currentlyEnabled = RegistryHelper.DoesStartUpKeyExist;
+            bool desiredState = !currentlyEnabled;
+
+            // Check if we're running as admin
+            if (RegistryHelper.IsUserAdministrator())
+            {
+                // Admin user - toggle directly
+                RegistryHelper.SetStartup(desiredState);
+                menuBuilder.UpdateStartupMenuItemState();
+            }
+            else
+            {
+                // Non-admin user - need to elevate
+                string action = desiredState ? "enable" : "disable";
+                var result = MessageBox.Show(
+                    $"Administrator privileges are required to {action} startup with Windows.\n\n" +
+                    "Would you like to restart as administrator?",
+                    "Administrator Required",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question
+                );
+
+                if (result == DialogResult.Yes)
+                {
+                    // Restart with elevation and pass the desired action as command-line argument
+                    string argument = desiredState ? "--enable-startup" : "--disable-startup";
+                    if (RegistryHelper.RestartAsAdministrator(argument))
+                    {
+                        // Successfully restarted, close this instance
+                        ExitApplication();
+                    }
+                    // If false, user cancelled UAC or error occurred (already handled in RegistryHelper)
+                }
+            }
         }
 
         private async void OnCheckForUpdatesClicked(object sender, EventArgs e)
