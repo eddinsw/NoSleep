@@ -13,15 +13,18 @@ A lightweight system tray application that prevents your Windows machine from sl
 - **Visual Status**: Different tray icons indicate whether sleep prevention is active or inactive
 - **Clean Exit**: Properly handles Windows shutdown events
 
-## What's New in v2.1.1
+## What's New in v2.1.2
 
+- 🐛 **Menu Bug Fix** - Fixed missing menu items when switching between running/stopped states
+
+## Previous Releases
+
+### v2.1.1
 - 🔐 **Smart elevation handling** - "Startup With Windows" now works seamlessly for all users with automatic UAC prompting and restart
 - ⏱️ **Uptime display** - Tray icon tooltip shows how long sleep prevention has been running (e.g., "Running 2h 15m")
 - 📋 **Enhanced About dialog** - Now displays version number, admin status, and hotkey configuration
 - ⌨️ **Better hotkey conflict detection** - Clear error messages with option to disable when conflicts occur
 - 🎨 **Cleaner menu** - Removed redundant "Restart as Administrator" option
-
-## Previous Releases
 
 ### v2.0.0
 - ⬆️ Migrated to .NET 8 for better performance and modern C# features
