@@ -67,7 +67,6 @@ namespace NoSleep
             menuBuilder.StopClicked += OnStopClicked;
             menuBuilder.CloseClicked += OnCloseClicked;
             menuBuilder.StartWithWindowsClicked += OnStartWithWindowsClicked;
-            menuBuilder.RestartAsAdminClicked += OnRestartAsAdminClicked;
             menuBuilder.CheckForUpdatesClicked += OnCheckForUpdatesClicked;
 
             // Tray icon events
@@ -210,19 +209,40 @@ namespace NoSleep
 
         private void OnStartWithWindowsClicked(object sender, EventArgs e)
         {
-            RegistryHelper.SetStartup(!RegistryHelper.DoesStartUpKeyExist);
-            menuBuilder.UpdateStartupMenuItemState();
-        }
+            bool currentlyEnabled = RegistryHelper.DoesStartUpKeyExist;
+            bool desiredState = !currentlyEnabled;
 
-        private void OnRestartAsAdminClicked(object sender, EventArgs e)
-        {
-            // Restart with administrator privileges
-            if (RegistryHelper.RestartAsAdministrator())
+            // Check if we're running as admin
+            if (RegistryHelper.IsUserAdministrator())
             {
-                // Successfully restarted, close this instance
-                ExitApplication();
+                // Admin user - toggle directly
+                RegistryHelper.SetStartup(desiredState);
+                menuBuilder.UpdateStartupMenuItemState();
             }
-            // If false, user cancelled UAC or error occurred (already handled in RegistryHelper)
+            else
+            {
+                // Non-admin user - need to elevate
+                string action = desiredState ? "enable" : "disable";
+                var result = MessageBox.Show(
+                    $"Administrator privileges are required to {action} startup with Windows.\n\n" +
+                    "Would you like to restart as administrator?",
+                    "Administrator Required",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question
+                );
+
+                if (result == DialogResult.Yes)
+                {
+                    // Restart with elevation and pass the desired action as command-line argument
+                    string argument = desiredState ? "--enable-startup" : "--disable-startup";
+                    if (RegistryHelper.RestartAsAdministrator(argument))
+                    {
+                        // Successfully restarted, close this instance
+                        ExitApplication();
+                    }
+                    // If false, user cancelled UAC or error occurred (already handled in RegistryHelper)
+                }
+            }
         }
 
         private async void OnCheckForUpdatesClicked(object sender, EventArgs e)

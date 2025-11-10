@@ -31,6 +31,34 @@ namespace NoSleep
                 })
                 .Run();
 
+            // Handle startup registry modification arguments (when running as admin)
+            if (args.Length > 0)
+            {
+                if (args[0] == "--enable-startup" || args[0] == "--disable-startup")
+                {
+                    bool enable = args[0] == "--enable-startup";
+
+                    try
+                    {
+                        RegistryHelper.SetStartup(enable);
+
+                        // Restart as normal user after registry modification
+                        RegistryHelper.RestartAsNormalUser();
+                        return; // Exit this elevated instance
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(
+                            $"Failed to modify startup settings: {ex.Message}",
+                            "Error",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error
+                        );
+                        return;
+                    }
+                }
+            }
+
             using (Mutex mutex = new Mutex(true, MutexName, out bool createdNew))
             {
                 if (!createdNew)

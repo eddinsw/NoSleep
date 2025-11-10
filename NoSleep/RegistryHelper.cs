@@ -78,8 +78,9 @@ namespace NoSleep
         /// <summary>
         /// Restarts the application with administrator privileges.
         /// </summary>
+        /// <param name="arguments">Optional command-line arguments to pass to the elevated process.</param>
         /// <returns>True if restart initiated successfully, false if user cancelled or error occurred.</returns>
-        public static bool RestartAsAdministrator()
+        public static bool RestartAsAdministrator(string arguments = null)
         {
             try
             {
@@ -87,7 +88,8 @@ namespace NoSleep
                 {
                     FileName = Application.ExecutablePath,
                     UseShellExecute = true,
-                    Verb = "runas" // Request elevation
+                    Verb = "runas", // Request elevation
+                    Arguments = arguments ?? string.Empty
                 };
                 Process.Start(processInfo);
                 return true;
@@ -106,6 +108,32 @@ namespace NoSleep
                     MessageBoxIcon.Error
                 );
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// Restarts the application as a normal user (without elevation).
+        /// </summary>
+        public static void RestartAsNormalUser()
+        {
+            try
+            {
+                var processInfo = new ProcessStartInfo
+                {
+                    FileName = Application.ExecutablePath,
+                    UseShellExecute = true
+                    // No Verb = "runas", so it will run as normal user
+                };
+                Process.Start(processInfo);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Failed to restart application: {ex.Message}",
+                    "Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
             }
         }
 

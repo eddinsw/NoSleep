@@ -13,7 +13,6 @@ namespace NoSleep
         private readonly ToolStripMenuItem itemStop;
         private readonly ToolStripMenuItem itemStart;
         private readonly ToolStripMenuItem itemStartWithWindows;
-        private readonly ToolStripMenuItem itemRestartAsAdmin;
         private readonly ToolStripMenuItem itemCheckForUpdates;
 
         private readonly ContextMenuStrip runningContextMenu;
@@ -24,7 +23,6 @@ namespace NoSleep
         public event EventHandler StopClicked;
         public event EventHandler CloseClicked;
         public event EventHandler StartWithWindowsClicked;
-        public event EventHandler RestartAsAdminClicked;
         public event EventHandler CheckForUpdatesClicked;
 
         public TrayMenuBuilder()
@@ -45,18 +43,10 @@ namespace NoSleep
             itemClose = new ToolStripMenuItem("Close");
             itemClose.Click += (s, e) => CloseClicked?.Invoke(s, e);
 
-            // Show different options based on admin status
-            if (RegistryHelper.IsUserAdministrator())
-            {
-                itemStartWithWindows = new ToolStripMenuItem("Startup With Windows");
-                itemStartWithWindows.Click += (s, e) => StartWithWindowsClicked?.Invoke(s, e);
-                itemStartWithWindows.Checked = RegistryHelper.DoesStartUpKeyExist;
-            }
-            else
-            {
-                itemRestartAsAdmin = new ToolStripMenuItem("Restart as Administrator...");
-                itemRestartAsAdmin.Click += (s, e) => RestartAsAdminClicked?.Invoke(s, e);
-            }
+            // Always show "Startup With Windows" for all users
+            itemStartWithWindows = new ToolStripMenuItem("Startup With Windows");
+            itemStartWithWindows.Click += (s, e) => StartWithWindowsClicked?.Invoke(s, e);
+            itemStartWithWindows.Checked = RegistryHelper.DoesStartUpKeyExist;
 
             // Build the context menus
             runningContextMenu = BuildRunningMenu();
@@ -78,10 +68,7 @@ namespace NoSleep
         /// </summary>
         public void UpdateStartupMenuItemState()
         {
-            if (itemStartWithWindows != null)
-            {
-                itemStartWithWindows.Checked = RegistryHelper.DoesStartUpKeyExist;
-            }
+            itemStartWithWindows.Checked = RegistryHelper.DoesStartUpKeyExist;
         }
 
         private ContextMenuStrip BuildRunningMenu()
@@ -91,10 +78,7 @@ namespace NoSleep
             menu.Items.Add(itemStop);
             menu.Items.Add(new ToolStripSeparator());
             // Settings and info
-            if (itemStartWithWindows != null)
-                menu.Items.Add(itemStartWithWindows);
-            if (itemRestartAsAdmin != null)
-                menu.Items.Add(itemRestartAsAdmin);
+            menu.Items.Add(itemStartWithWindows);
             menu.Items.Add(itemCheckForUpdates);
             menu.Items.Add(itemAbout);
             menu.Items.Add(new ToolStripSeparator());
@@ -110,10 +94,7 @@ namespace NoSleep
             menu.Items.Add(itemStart);
             menu.Items.Add(new ToolStripSeparator());
             // Settings and info
-            if (itemStartWithWindows != null)
-                menu.Items.Add(itemStartWithWindows);
-            if (itemRestartAsAdmin != null)
-                menu.Items.Add(itemRestartAsAdmin);
+            menu.Items.Add(itemStartWithWindows);
             menu.Items.Add(itemCheckForUpdates);
             menu.Items.Add(itemAbout);
             menu.Items.Add(new ToolStripSeparator());
