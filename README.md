@@ -16,10 +16,12 @@ A lightweight system tray application that prevents your Windows machine from sl
 ## What's New in v2.0.0
 
 - ⬆️ Migrated to .NET 8 for better performance and modern C# features
-- ⌨️ Added global hotkey support (default: `Ctrl+Shift+F9`)
+- 🔐 Smart elevation handling - "Startup With Windows" now works for all users with automatic UAC prompting
+- ⏱️ Added uptime display in tray icon tooltip (e.g., "Running 2h 15m")
+- ⌨️ Added global hotkey support (default: `Ctrl+Shift+F9`) with conflict detection
 - 🔔 Added Windows toast notifications for state changes
 - 🔄 Added automatic update system with Velopack
-- 🏗️ Refactored codebase with improved architecture
+- 🏗️ Refactored codebase with improved architecture (ApplicationContext-based)
 - 🐛 Fixed memory leaks and improved resource management
 
 ## How It Works
@@ -30,7 +32,7 @@ The application uses Windows API calls (`SetThreadExecutionState`) to prevent th
 
 - **Operating System**: Windows 10 version 1809 (build 17763) or later, or Windows 11
 - **.NET Runtime**: .NET 8 (included in installer)
-- **Administrator Privileges**: Only required for auto-startup configuration
+- **Administrator Privileges**: Automatically requested when needed (e.g., for auto-startup configuration)
 
 ## Installation & Usage
 
@@ -42,9 +44,9 @@ The application uses Windows API calls (`SetThreadExecutionState`) to prevent th
    - **Press `Ctrl+Shift+F9`** to toggle from anywhere (configurable)
    - **Right-click** the tray icon to access controls:
      - **Start/Stop**: Toggle sleep prevention
-     - **About**: View application information
+     - **About**: View application information, version, and admin status
      - **Check for Updates**: Manually check for updates
-     - **Startup With Windows**: Configure auto-start (admin only)
+     - **Startup With Windows**: Configure auto-start (handles elevation automatically if needed)
      - **Close**: Exit the application
 
 ## Configuration
